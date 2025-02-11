@@ -9,6 +9,7 @@ import SwiftUI
 
 struct WeatherView: View {
     @State var weatherVM = WeatherViewModel()
+    @State private var sheetIsPresented = false
     
     var body: some View {
         NavigationStack {
@@ -40,7 +41,7 @@ struct WeatherView: View {
                     List(0..<weatherVM.dailyWeatherCode.count, id: \.self) { index in
                         HStack (alignment: .top) {
                             Image(systemName: getWeatherIcon(for: weatherVM.dailyWeatherCode[index]))
-                            Text(weatherVM.date[index])
+                            Text(getWeekDate(value: index+1))
                             
                             Spacer()
                             
@@ -50,6 +51,8 @@ struct WeatherView: View {
                                 .bold()
                         }
                         .font(.title2)
+                        .foregroundStyle(.white)
+                        .listRowBackground(Color.clear)
                     }
                     .listStyle(.plain)
                 }
@@ -57,7 +60,7 @@ struct WeatherView: View {
                 .toolbar {
                     ToolbarItem(placement: .topBarTrailing) {
                         Button {
-                            //TODO
+                            sheetIsPresented.toggle()
                         } label: {
                             Image(systemName: "gear")
                         }
@@ -69,6 +72,9 @@ struct WeatherView: View {
         .task {
             await weatherVM.getData()
         }
+        .fullScreenCover(isPresented: $sheetIsPresented) {
+            PreferenceView()
+        }
     }
 }
 
@@ -77,6 +83,13 @@ struct WeatherView: View {
 }
 
 extension WeatherView {
+    func getWeekDate(value: Int) -> String {
+        let date = Calendar.current.date(byAdding: .day, value: value, to: Date.now)!
+        let dayNumber = Calendar.current.component(.weekday, from: date)
+        let weekDay = Calendar.current.weekdaySymbols[dayNumber-1]
+        return weekDay
+    }
+    
     func getWeatherDescription(for code: Int) -> String {
         switch code {
         case 0:
