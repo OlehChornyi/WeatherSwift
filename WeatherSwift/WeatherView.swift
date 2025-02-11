@@ -6,10 +6,24 @@
 //
 
 import SwiftUI
+import SwiftData
 
 struct WeatherView: View {
+    @Query var preferences: [Preference]
+    @State private var preference = Preference()
     @State var weatherVM = WeatherViewModel()
     @State private var sheetIsPresented = false
+    var degreeLabel: String {
+        if preference.degreeUnitShowing {
+            if preference.selectedUnit == .imperial {
+                return "F"
+            } else {
+                return "C"
+            }
+        }
+        return ""
+    }
+    @Environment(\.modelContext) private var modelContext
     
     var body: some View {
         NavigationStack {
@@ -28,12 +42,12 @@ struct WeatherView: View {
                         .font(.largeTitle)
                         .foregroundStyle(.white)
                     
-                    Text("\(Int(weatherVM.temperature))°F")
+                    Text("\(Int(weatherVM.temperature))°\(degreeLabel)")
                         .font(.system(size: 150))
                         .fontWeight(.thin)
                         .foregroundStyle(.white)
                     
-                    Text("Wind \(Int(weatherVM.windSpeed))mph - Feels like \(Int(weatherVM.feelsLike))°F")
+                    Text("Wind \(Int(weatherVM.windSpeed))\(preference.selectedUnit == .imperial ? "mph" : "kmh") - Feels like \(Int(weatherVM.feelsLike))°\(degreeLabel)")
                         .font(.title2)
                         .padding(.bottom)
                         .foregroundStyle(.white)
@@ -45,8 +59,8 @@ struct WeatherView: View {
                             
                             Spacer()
                             
-                            Text("\(Int(weatherVM.dailyLowTemp[index]))°F /")
-                            Text("\(Int(weatherVM.dailyHighTemp[index]))")
+                            Text("\(Int(weatherVM.dailyLowTemp[index]))°\(degreeLabel) /")
+                            Text("\(Int(weatherVM.dailyHighTemp[index]))°\(degreeLabel)")
                                 .font(.title)
                                 .bold()
                         }
@@ -69,8 +83,13 @@ struct WeatherView: View {
                 }
             }
         }
+        .onChange(of: preferences, {
+            Task {
+                await callWeatherAPI()
+            }
+        })
         .task {
-            await weatherVM.getData()
+            await callWeatherAPI()
         }
         .fullScreenCover(isPresented: $sheetIsPresented) {
             PreferenceView()
@@ -83,6 +102,14 @@ struct WeatherView: View {
 }
 
 extension WeatherView {
+    func callWeatherAPI() async {
+        if !preferences.isEmpty {
+            preference = preferences.first!
+            weatherVM.urlString = "https://api.open-meteo.com/v1/forecast?latitude=\(preference.latString)&longitude=\(preference.longString)&current=temperature_2m,relative_humidity_2m,apparent_temperature,precipitation,weather_code,wind_speed_10m&hourly=uv_index&daily=weather_code,temperature_2m_max,temperature_2m_min,precipitation_sum&temperature_unit=\(preference.selectedUnit == .imperial ? "fahrenheit" : "celsius")&wind_speed_unit=\(preference.selectedUnit == .imperial ? "mph" : "kmh")&precipitation_unit=inch&timezone=auto"
+        }
+        await weatherVM.getData()
+    }
+    
     func getWeekDate(value: Int) -> String {
         let date = Calendar.current.date(byAdding: .day, value: value, to: Date.now)!
         let dayNumber = Calendar.current.component(.weekday, from: date)
