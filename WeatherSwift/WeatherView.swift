@@ -25,16 +25,35 @@ struct WeatherView: View {
                     
                     Text(getWeatherDescription(for: weatherVM.weatherCode))
                         .font(.largeTitle)
+                        .foregroundStyle(.white)
                     
                     Text("\(Int(weatherVM.temperature))°F")
                         .font(.system(size: 150))
                         .fontWeight(.thin)
+                        .foregroundStyle(.white)
                     
                     Text("Wind \(Int(weatherVM.windSpeed))mph - Feels like \(Int(weatherVM.feelsLike))°F")
                         .font(.title2)
                         .padding(.bottom)
+                        .foregroundStyle(.white)
+                    
+                    List(0..<weatherVM.dailyWeatherCode.count, id: \.self) { index in
+                        HStack (alignment: .top) {
+                            Image(systemName: getWeatherIcon(for: weatherVM.dailyWeatherCode[index]))
+                            Text(weatherVM.date[index])
+                            
+                            Spacer()
+                            
+                            Text("\(Int(weatherVM.dailyLowTemp[index]))°F /")
+                            Text("\(Int(weatherVM.dailyHighTemp[index]))")
+                                .font(.title)
+                                .bold()
+                        }
+                        .font(.title2)
+                    }
+                    .listStyle(.plain)
                 }
-                .foregroundStyle(.white)
+                
                 .toolbar {
                     ToolbarItem(placement: .topBarTrailing) {
                         Button {
